@@ -1,7 +1,6 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import * as fs from 'fs';
-import {wait} from './wait'
 import fetch from 'node-fetch';
 
 async function getJson(url: string): Promise<unknown> {
