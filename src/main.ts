@@ -3,6 +3,13 @@ import * as github from '@actions/github'
 import * as fs from 'fs';
 import fetch from 'node-fetch';
 
+interface Package {
+  readonly name: string,
+  readonly version: string,
+  url?: string,
+  repo?: string,
+}
+
 async function getJson(url: string): Promise<unknown> {
   const res = await fetch(url);
 
@@ -27,14 +34,16 @@ async function run(): Promise<void> {
 
     const [ owner, repo ] = repository.split('/');
 
-    let newPackages: unknown[] = [];
-    let prereleasePackages: unknown[] = [];
+    let newPackages: Package[] = [];
+    let prereleasePackages: Package[] = [];
 
     const gh = github.getOctokit(token);
     const releases = await gh.rest.repos.listReleases({ owner, repo });
     if (releases.status !== 200) throw new Error(`Failed to get releases for ${repository}`);
     for (const release of releases.data) {
       if (release.draft) continue;
+
+      console.log(`[INFO] Processing release ${release.name} (${release.tag_name})`);
 
       let meta_asset: (typeof release.assets)[0] | null = null;
       let package_zip: (typeof release.assets)[0] | null = null;
@@ -58,7 +67,9 @@ async function run(): Promise<void> {
         console.log("Got: " + JSON.stringify(packageInfo_));
         continue;
       }
-      const packageInfo = packageInfo_ as { [key: string]: unknown };
+
+      const packageInfo = packageInfo_ as Package;
+
       packageInfo['url'] = package_zip.browser_download_url;
       packageInfo['repo'] = repo_url;
       prereleasePackages.push(packageInfo);
@@ -78,14 +89,14 @@ async function run(): Promise<void> {
   }
 }
 
-function update_repo(output: string, url: string, author: string, name: string, package_name: string, packages: unknown[]) {
+function update_repo(output: string, url: string, author: string, name: string, package_name: string, packages: Package[]) {
   if (url === '') return;
 
   const filename = new URL(url).pathname.split('/').pop() as string;
   const output_path = output + '/' + filename;
 
   const repoInfo = {
-    packages: {} as { [key: string]: { 'versions': unknown[] } },
+    packages: {} as { [key: string]: { 'versions': { [version: string]: unknown } } },
     author: author,
     name: name,
     url: url,
@@ -95,7 +106,11 @@ function update_repo(output: string, url: string, author: string, name: string, 
     repoInfo.packages = priorRepoInfo.packages;
   }
 
-  repoInfo.packages[package_name] = { versions: packages };
+  for (const pkg of packages) {
+    if (repoInfo.packages[pkg.name] === undefined) repoInfo.packages[pkg.name] = { versions: {} };
+    repoInfo.packages[pkg.name].versions[pkg.version] = pkg;
+  }
+
   fs.writeFileSync(output_path, JSON.stringify(repoInfo, null, 2));
 }
 
