@@ -47,4 +47,4 @@ jobs:
           git rm --cached -r dist
           git add dist
           git commit -m "Rebuild generated files"
-          git push origin HEAD:refs/heads/dist
+          git push origin HEAD:refs/heads/dist --force
