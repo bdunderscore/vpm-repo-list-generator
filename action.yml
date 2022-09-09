@@ -19,6 +19,15 @@ inputs:
     required: false
     description: The github auth token
     default: ${{ secrets.GITHUB_TOKEN }}
+  repo_url:
+    required: true
+    description: The published URL of this repository
+  repo_author:
+    required: true
+    description: This repository's author
+  repo_name:
+    required: true
+    description: The display name for the repository
 runs:
   using: 'node18'
   main: 'dist/index.js'
