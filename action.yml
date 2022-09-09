@@ -16,9 +16,8 @@ inputs:
     required: true
     description: The VPM package name to include
   token:
-    required: false
+    required: true
     description: The github auth token
-    default: ${{ secrets.GITHUB_TOKEN }}
   repo_url:
     required: true
     description: The published URL of this repository
