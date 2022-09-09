@@ -83,7 +83,7 @@ async function run(): Promise<void> {
     }
 
     update_repo(output, repo_url, repo_author, repo_name, package_name, newPackages);
-    update_repo(output, prerelease_repo_url, repo_author, prerelease_repo_name, package_name, prereleasePackages);
+    update_repo(output, prerelease_repo_url, repo_author + " (prerelease)", prerelease_repo_name, package_name, prereleasePackages);
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
