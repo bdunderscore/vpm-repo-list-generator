@@ -17,34 +17,24 @@ async function run(): Promise<void> {
   try {
     const output: string = core.getInput('output');
     const repository: string = core.getInput('repository');
-    const include_prereleases_s: string = core.getInput('include_prereleases');
     const package_name: string = core.getInput('package');
     const token: string = core.getInput('token');
     const repo_url: string = core.getInput('repo_url');
+    const prerelease_repo_url: string = core.getInput('prerelease_repo_url');
     const repo_author: string = core.getInput('repo_author');
     const repo_name: string = core.getInput('repo_name');
+    let prerelease_repo_name: string = core.getInput('prerelease_repo_name');
 
     const [ owner, repo ] = repository.split('/');
 
     let newPackages: unknown[] = [];
-    let include_prereleases;
-    switch (include_prereleases_s) {
-      case 'true':
-        include_prereleases = true;
-        break;
-      case 'false':
-        include_prereleases = false;
-        break;
-      default:
-        throw new Error(`Invalid value for include_prereleases: ${include_prereleases_s}`);
-    }
+    let prereleasePackages: unknown[] = [];
 
     const gh = github.getOctokit(token);
     const releases = await gh.rest.repos.listReleases({ owner, repo });
     if (releases.status !== 200) throw new Error(`Failed to get releases for ${repository}`);
     for (const release of releases.data) {
       if (release.draft) continue;
-      if (release.prerelease && !include_prereleases) continue;
 
       let meta_asset: (typeof release.assets)[0] | null = null;
       let package_zip: (typeof release.assets)[0] | null = null;
@@ -71,25 +61,42 @@ async function run(): Promise<void> {
       const packageInfo = packageInfo_ as { [key: string]: unknown };
       packageInfo['url'] = package_zip.browser_download_url;
       packageInfo['repo'] = repo_url;
-      newPackages.push(packageInfo);
-    }
-  
-    const repoInfo = {
-      packages: [] as unknown[],
-      author: repo_author,
-      name: repo_name,
-      url: repo_url,
-    }
-    if (fs.existsSync(output)) {
-      const priorRepoInfo = JSON.parse(fs.readFileSync(output, 'utf8'));
-      repoInfo.packages = priorRepoInfo.packages;
+      prereleasePackages.push(packageInfo);
+      if (!release.prerelease) {
+        newPackages.push(packageInfo);
+      }
     }
 
-    repoInfo.packages.push(...newPackages);
-    fs.writeFileSync(output, JSON.stringify(repoInfo, null, 2));
+    if (prerelease_repo_name === '') {
+      prerelease_repo_name = repo_name + ' (prereleases)';
+    }
+
+    update_repo(output, repo_url, repo_author, repo_name, package_name, newPackages);
+    update_repo(output, prerelease_repo_url, repo_author, prerelease_repo_name, package_name, prereleasePackages);
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
+}
+
+function update_repo(output: string, url: string, author: string, name: string, package_name: string, packages: unknown[]) {
+  if (url === '') return;
+
+  const filename = new URL(url).pathname.split('/').pop() as string;
+  const output_path = output + '/' + filename;
+
+  const repoInfo = {
+    packages: {} as { [key: string]: { 'versions': unknown[] } },
+    author: author,
+    name: name,
+    url: url,
+  }
+  if (fs.existsSync(output_path)) {
+    const priorRepoInfo = JSON.parse(fs.readFileSync(output, 'utf8'));
+    repoInfo.packages = priorRepoInfo.packages;
+  }
+
+  repoInfo.packages[package_name] = { versions: packages };
+  fs.writeFileSync(output_path, JSON.stringify(repoInfo, null, 2));
 }
 
 run()

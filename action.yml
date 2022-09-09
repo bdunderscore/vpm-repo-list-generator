@@ -4,14 +4,11 @@ author: bd_
 inputs:
   output:
     required: true
-    description: 'output path'
+    description: Directory that will contain the resulting vpm files
   repository:
     required: false
     description: 'Repository to obtain releases from'
     default: ${{ github.repository }}
-  include_prereleases:
-    required: false
-    default: false
   package:
     required: true
     description: The VPM package name to include
@@ -21,12 +18,20 @@ inputs:
   repo_url:
     required: true
     description: The published URL of this repository
+  prerelease_repo_url:
+    required: false
+    description: The published URL of a repository to receive prereleases
+    default:
   repo_author:
     required: true
     description: This repository's author
   repo_name:
     required: true
     description: The display name for the repository
+  prerelease_repo_name:
+    required: false
+    description: The display name for the prerelease repository
+    default:
 runs:
   using: 'node16'
   main: 'dist/index.js'
