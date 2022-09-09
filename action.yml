@@ -1,11 +1,24 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'VPM package listing generator'
+description: 'Generates or augments a VPM package listing with releases from a specified repository'
+author: bd_
 inputs:
-  milliseconds: # change this
+  output:
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    description: 'output path'
+  repository:
+    required: false
+    description: 'Repository to obtain releases from'
+    default: ${{ github.repository }}
+  include_prereleases:
+    required: false
+    default: false
+  package:
+    required: true
+    description: The VPM package name to include
+  token:
+    required: false
+    description: The github auth token
+    default: ${{ secrets.GITHUB_TOKEN }}
 runs:
-  using: 'node16'
+  using: 'node18'
   main: 'dist/index.js'
