@@ -70,7 +70,7 @@ async function run(): Promise<void> {
 
       const packageInfo = packageInfo_ as Package;
 
-      packageInfo['url'] = package_zip.browser_download_url;
+      packageInfo['url'] = package_zip.browser_download_url + "?";
       packageInfo['repo'] = repo_url;
       prereleasePackages.push(packageInfo);
       if (!release.prerelease) {
