@@ -38,6 +38,9 @@ async function run(): Promise<void> {
             'prerelease_repo_name'
         );
 
+        const repo_id: string = core.getInput('repo_id');
+        let prerelease_repo_id: string = core.getInput('prerelease_repo_id');
+
         const [owner, repo] = repository.split('/');
 
         const newPackages: Package[] = [];
@@ -98,12 +101,17 @@ async function run(): Promise<void> {
             prerelease_repo_name = `${repo_name} (prereleases)`;
         }
 
+        if (!prerelease_repo_id && repo_id) {
+            prerelease_repo_id = `${repo_id}.prereleases`;
+        }
+
         update_repo(
             output,
             repo_url,
             repo_author,
             repo_name,
             package_name,
+            repo_id,
             newPackages
         );
         update_repo(
@@ -112,6 +120,7 @@ async function run(): Promise<void> {
             `${repo_author} (prerelease)`,
             prerelease_repo_name,
             package_name,
+            prerelease_repo_id,
             prereleasePackages
         );
     } catch (error) {
@@ -125,6 +134,7 @@ function update_repo(
     author: string,
     name: string,
     package_name: string,
+    repo_id: string,
     packages: Package[]
 ): void {
     if (url === '') return;
@@ -138,6 +148,7 @@ function update_repo(
         },
         author,
         name,
+        id: repo_id ? repo_id : undefined, // to remove id property if not specified
         url
     };
     if (fs.existsSync(output_path)) {
