@@ -32,6 +32,12 @@ inputs:
     required: false
     description: The display name for the prerelease repository
     default:
+  repo_id:
+    required: false
+    description: The id for the repository
+  prerelease_repo_id:
+    required: false
+    description: The id for the prerelease repository
 runs:
   using: 'node16'
   main: 'dist/index.js'
