@@ -48,6 +48,7 @@ async function run(): Promise<void> {
 
         const gh = github.getOctokit(token);
         const releases = await gh.rest.repos.listReleases({owner, repo});
+        console.log(releases);
         if (releases.status !== 200)
             throw new Error(`Failed to get releases for ${repository}`);
         for (const release of releases.data) {
