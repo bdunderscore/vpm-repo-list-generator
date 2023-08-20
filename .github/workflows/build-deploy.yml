@@ -44,7 +44,7 @@ jobs:
         run: |
           git config user.email 'ci@fushizen.net'
           git config user.name 'Autobuild'
-          git rm --cached -r dist
+          git rm --cached -r dist || true
           git add -f dist
           git commit -m "Rebuild generated files"
           git push origin HEAD:refs/heads/dist --force
