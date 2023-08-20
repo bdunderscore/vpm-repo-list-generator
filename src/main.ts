@@ -47,7 +47,10 @@ async function run(): Promise<void> {
         const prereleasePackages: Package[] = [];
 
         const gh = github.getOctokit(token);
-        const releases = await gh.paginate(gh.rest.repos.listReleases, {owner, repo});
+        const releases = await gh.paginate(gh.rest.repos.listReleases, {
+            owner,
+            repo
+        });
         console.log(releases);
         for (const release of releases) {
             if (release.draft) continue;
@@ -56,8 +59,8 @@ async function run(): Promise<void> {
                 `[INFO] Processing release ${release.name} (${release.tag_name})`
             );
 
-            let meta_asset: typeof release.assets[0] | null = null;
-            let package_zip: typeof release.assets[0] | null = null;
+            let meta_asset: (typeof release.assets)[0] | null = null;
+            let package_zip: (typeof release.assets)[0] | null = null;
             for (const asset of release.assets) {
                 if (asset.name === 'package.json') {
                     meta_asset = asset;
