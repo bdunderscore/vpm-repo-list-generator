@@ -47,11 +47,9 @@ async function run(): Promise<void> {
         const prereleasePackages: Package[] = [];
 
         const gh = github.getOctokit(token);
-        const releases = await gh.rest.repos.listReleases({owner, repo});
+        const releases = await gh.paginate(gh.rest.repos.listReleases, {owner, repo});
         console.log(releases);
-        if (releases.status !== 200)
-            throw new Error(`Failed to get releases for ${repository}`);
-        for (const release of releases.data) {
+        for (const release of releases) {
             if (release.draft) continue;
 
             console.log(
