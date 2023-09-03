@@ -154,7 +154,7 @@ function update_repo(
         url
     };
     if (fs.existsSync(output_path)) {
-        const priorRepoInfo = JSON.parse(fs.readFileSync(output, 'utf8'));
+        const priorRepoInfo = JSON.parse(fs.readFileSync(output_path, 'utf8'));
         repoInfo.packages = priorRepoInfo.packages;
     }
 
