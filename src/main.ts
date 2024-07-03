@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import fetch from 'node-fetch';
 
 interface Package {
@@ -8,6 +9,7 @@ interface Package {
     readonly version: string;
     url?: string;
     repo?: string;
+    zipSHA256?: string;
 }
 
 async function getJson(url: string): Promise<unknown> {
@@ -20,6 +22,39 @@ async function getJson(url: string): Promise<unknown> {
     }
 
     return await res.json();
+}
+
+async function fetchSHA256Sum(url: string): Promise<string> {
+    const res = await fetch(url);
+
+    if (!res.ok) {
+        throw new Error(
+            `Failed to get ${url} with status code ${res.status} ${res.statusText}`
+        );
+    }
+
+    const text = await res.text();
+    const hash = text.split(' ')[0];
+    if (hash.length !== 64) {
+        throw new Error(`Invalid SHA256 hash: ${hash}`);
+    }
+
+    return hash;
+}
+
+async function fetchZipAndComputeSHA256(url: string): Promise<string> {
+    const res = await fetch(url);
+
+    if (!res.ok) {
+        throw new Error(
+            `Failed to get ${url} with status code ${res.status} ${res.statusText}`
+        );
+    }
+
+    const buffer = new Uint8Array(await res.arrayBuffer());
+    const hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    return hash.digest('hex');
 }
 
 async function run(): Promise<void> {
@@ -59,8 +94,8 @@ async function run(): Promise<void> {
                 `[INFO] Processing release ${release.name} (${release.tag_name})`
             );
 
-            let meta_asset: (typeof release.assets)[0] | null = null;
-            let package_zip: (typeof release.assets)[0] | null = null;
+            let meta_asset: typeof release.assets[0] | null = null;
+            let package_zip: typeof release.assets[0] | null = null;
             for (const asset of release.assets) {
                 if (asset.name === 'package.json') {
                     meta_asset = asset;
@@ -89,10 +124,41 @@ async function run(): Promise<void> {
                 continue;
             }
 
+            const sha256_file_name = `${package_zip.name}.sha256`;
+            const package_zip_sha256_file:
+                | typeof release.assets[number]
+                | undefined = release.assets.find(
+                asset => asset.name === sha256_file_name
+            );
+
+            let sha256Hash: string;
+
+            if (package_zip_sha256_file) {
+                sha256Hash = await fetchSHA256Sum(
+                    package_zip_sha256_file.browser_download_url
+                );
+            } else {
+                // TODO: cache the SHA256 hash to ensure it doesn't change
+                sha256Hash = await fetchZipAndComputeSHA256(
+                    package_zip.browser_download_url
+                );
+            }
+
             const packageInfo = packageInfo_ as Package;
 
             packageInfo['url'] = `${package_zip.browser_download_url}?`;
             packageInfo['repo'] = repo_url;
+
+            if (sha256Hash) {
+                if (
+                    packageInfo.zipSHA256 &&
+                    packageInfo.zipSHA256 !== sha256Hash
+                ) {
+                    throw new Error('SHA256 is already set and different');
+                }
+                packageInfo['zipSHA256'] = sha256Hash;
+            }
+
             prereleasePackages.push(packageInfo);
             if (!release.prerelease) {
                 newPackages.push(packageInfo);
