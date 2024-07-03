@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'fs';
+import * as crypto from 'crypto';
 import fetch from 'node-fetch';
 
 interface Package {
@@ -39,6 +40,21 @@ async function fetchSHA256Sum(url: string): Promise<string> {
     }
 
     return hash;
+}
+
+async function fetchZipAndComputeSHA256(url: string): Promise<string> {
+    const res = await fetch(url);
+
+    if (!res.ok) {
+        throw new Error(
+            `Failed to get ${url} with status code ${res.status} ${res.statusText}`
+        );
+    }
+
+    const buffer = new Uint8Array(await res.arrayBuffer());
+    const hash = crypto.createHash('sha256');
+    hash.update(buffer);
+    return hash.digest('hex');
 }
 
 async function run(): Promise<void> {
@@ -115,11 +131,18 @@ async function run(): Promise<void> {
                 asset => asset.name === sha256_file_name
             );
 
-            const sha256Hash = package_zip_sha256_file
-                ? await fetchSHA256Sum(
-                      package_zip_sha256_file.browser_download_url
-                  )
-                : undefined;
+            let sha256Hash: string;
+
+            if (package_zip_sha256_file) {
+                sha256Hash = await fetchSHA256Sum(
+                    package_zip_sha256_file.browser_download_url
+                );
+            } else {
+                // TODO: cache the SHA256 hash to ensure it doesn't change
+                sha256Hash = await fetchZipAndComputeSHA256(
+                    package_zip.browser_download_url
+                );
+            }
 
             const packageInfo = packageInfo_ as Package;
 
