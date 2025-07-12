@@ -87,7 +87,8 @@ export class VPMRepository {
             }
 
             if (version_info.name !== pkg.name || version_info.version !== pkg.version) {
-                throw new Error(`Package name or version mismatch: expected ${pkg.name}@${pkg.version}, got ${version_info.name}@${version_info.version}`);
+                console.error(`[ERROR] Package name or version mismatch: expected ${pkg.name}@${pkg.version}, got ${version_info.name}@${version_info.version}`);
+                return;
             }
 
             this.data.packages![pkg.name].versions[pkg.version] = version_info;
