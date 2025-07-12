@@ -1,6 +1,6 @@
-import { createHash } from "crypto";
-import { version } from "os";
-import * as fs from "fs";
+import {createHash} from 'crypto';
+import {version} from 'os';
+import * as fs from 'fs';
 
 export interface Package {
     readonly name: string;
@@ -22,7 +22,7 @@ export interface VPMPackage {
 }
 
 export interface VPMRepositoryData {
-    packages?: { [key: string]: { versions: {[version: string]: VPMPackage} } };
+    packages?: {[key: string]: {versions: {[version: string]: VPMPackage}}};
     author?: string;
     name?: string;
     id?: string;
@@ -46,7 +46,7 @@ export class VPMRepository {
         if (fs.existsSync(path)) {
             this.data = JSON.parse(fs.readFileSync(path, 'utf-8'));
         } else {
-            this.data = { ...init, packages: {} };
+            this.data = {...init, packages: {}};
         }
     }
 
@@ -54,40 +54,55 @@ export class VPMRepository {
         try {
             const res = await fetch(url);
             if (!res.ok) {
-                throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+                throw new Error(
+                    `Failed to fetch ${url}: ${res.status} ${res.statusText}`
+                );
             }
             const arrayBuffer = await res.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
             const hash = createHash('sha256').update(buffer).digest('hex');
             return hash;
         } catch (error) {
-            console.error(`Error fetching or computing SHA256 for ${url}:`, error);
+            console.error(
+                `Error fetching or computing SHA256 for ${url}:`,
+                error
+            );
             return undefined;
         }
     }
 
     async addPackage(pkg: Package): Promise<void> {
-        let version_info: VPMPackage | null = this.data.packages![pkg.name]?.versions[pkg.version];
+        let version_info: VPMPackage | null =
+            this.data.packages![pkg.name]?.versions[pkg.version];
 
         if (version_info === undefined) {
-            console.log(`[INFO] Adding package ${pkg.name}@${pkg.version} to the repository.`);
+            console.log(
+                `[INFO] Adding package ${pkg.name}@${pkg.version} to the repository.`
+            );
             version_info = await pkg.package_info();
 
             if (version_info === null) {
-                console.log(`[ERROR] Failed to retrieve package info for ${pkg.name}@${pkg.version}`);
+                console.log(
+                    `[ERROR] Failed to retrieve package info for ${pkg.name}@${pkg.version}`
+                );
                 return;
             }
 
             if (this.data.packages![pkg.name] === undefined) {
-                this.data.packages![pkg.name] = { versions: {} };
+                this.data.packages![pkg.name] = {versions: {}};
             }
 
             if (version_info.name === undefined) {
                 version_info.name = pkg.name;
             }
 
-            if (version_info.name !== pkg.name || version_info.version !== pkg.version) {
-                console.error(`[ERROR] Package name or version mismatch: expected ${pkg.name}@${pkg.version}, got ${version_info.name}@${version_info.version}`);
+            if (
+                version_info.name !== pkg.name ||
+                version_info.version !== pkg.version
+            ) {
+                console.error(
+                    `[ERROR] Package name or version mismatch: expected ${pkg.name}@${pkg.version}, got ${version_info.name}@${version_info.version}`
+                );
                 return;
             }
 
@@ -100,9 +115,13 @@ export class VPMRepository {
 
         if (version_info.zipSHA256 === undefined) {
             version_info.zipSHA256 = await this.fetchAndComputeSha256(pkg.url);
-            console.log(`[INFO] Computed SHA256 for ${pkg.url}: ${version_info.zipSHA256}`);
+            console.log(
+                `[INFO] Computed SHA256 for ${pkg.url}: ${version_info.zipSHA256}`
+            );
             if (version_info.zipSHA256 === null) {
-                console.error(`[ERROR] Failed to compute SHA256 for ${pkg.url}`);
+                console.error(
+                    `[ERROR] Failed to compute SHA256 for ${pkg.url}`
+                );
                 return;
             }
         }

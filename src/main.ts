@@ -2,7 +2,7 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import * as fs from 'fs';
 import fetch from 'node-fetch';
-import { VPMPackage, VPMRepository } from './repo';
+import {VPMPackage, VPMRepository} from './repo';
 
 interface Package {
     readonly name: string;
@@ -43,7 +43,9 @@ export async function run(): Promise<void> {
         const newPackages: Package[] = [];
         const prereleasePackages: Package[] = [];
 
-        const repo_file_name = new URL(repo_url).pathname.split('/').pop() as string;
+        const repo_file_name = new URL(repo_url).pathname
+            .split('/')
+            .pop() as string;
         const repo_file_path = `${output}/${repo_file_name}`;
         const vpm_repo = new VPMRepository(repo_file_path, {
             author: repo_author,
@@ -96,9 +98,11 @@ export async function run(): Promise<void> {
                 }
             }
 
-            const get_package_info = async function() {
+            const get_package_info = async function () {
                 console.log(`[INFO] Fetching package info for ${release.name}`);
-                const packageInfo_ = await getJson(meta_asset!.browser_download_url);
+                const packageInfo_ = await getJson(
+                    meta_asset!.browser_download_url
+                );
                 if (typeof packageInfo_ !== 'object') {
                     console.error(
                         `[ERROR] Failed to parse package.json for release ${release.name}`
@@ -113,16 +117,18 @@ export async function run(): Promise<void> {
                 packageInfo['repo'] = repo_url;
                 packageInfo['zipSHA256'] = zipSHA256;
 
-                if (doc_url !== "") {
-                    packageInfo["documentationUrl"] = doc_url;
+                if (doc_url !== '') {
+                    packageInfo['documentationUrl'] = doc_url;
                 }
                 // Temporary until we get the HTML changelog generation and anchors sorted out
                 packageInfo['changelogUrl'] = release.html_url;
 
-                console.log(`[INFO] Package info for ${release.name}: ${JSON.stringify(packageInfo)}`);
+                console.log(
+                    `[INFO] Package info for ${release.name}: ${JSON.stringify(packageInfo)}`
+                );
 
                 return packageInfo;
-            }
+            };
 
             await vpm_repo.addPackage({
                 name: package_name,
