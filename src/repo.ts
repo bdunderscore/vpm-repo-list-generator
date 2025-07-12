@@ -1,5 +1,4 @@
 import {createHash} from 'crypto';
-import {version} from 'os';
 import * as fs from 'fs';
 
 export interface Package {
@@ -39,6 +38,9 @@ export interface VPMRepositoryInit {
 export class VPMRepository {
     readonly file_path: string;
     readonly data: VPMRepositoryData;
+    readonly packages: {
+        [key: string]: {versions: {[version: string]: VPMPackage}};
+    } = {};
 
     constructor(path: string, init: VPMRepositoryInit) {
         this.file_path = path;
@@ -48,6 +50,12 @@ export class VPMRepository {
         } else {
             this.data = {...init, packages: {}};
         }
+
+        if (this.data.packages === undefined) {
+            this.data.packages = {};
+        }
+
+        this.packages = this.data.packages;
     }
 
     async fetchAndComputeSha256(url: string): Promise<string | undefined> {
@@ -73,7 +81,7 @@ export class VPMRepository {
 
     async addPackage(pkg: Package): Promise<void> {
         let version_info: VPMPackage | null =
-            this.data.packages![pkg.name]?.versions[pkg.version];
+            this.packages[pkg.name]?.versions[pkg.version];
 
         if (version_info === undefined) {
             console.log(
@@ -88,8 +96,8 @@ export class VPMRepository {
                 return;
             }
 
-            if (this.data.packages![pkg.name] === undefined) {
-                this.data.packages![pkg.name] = {versions: {}};
+            if (this.packages[pkg.name] === undefined) {
+                this.packages[pkg.name] = {versions: {}};
             }
 
             if (version_info.name === undefined) {
@@ -106,7 +114,7 @@ export class VPMRepository {
                 return;
             }
 
-            this.data.packages![pkg.name].versions[pkg.version] = version_info;
+            this.packages[pkg.name].versions[pkg.version] = version_info;
 
             if (version_info.repo === null) {
                 version_info.repo = this.data.url;

@@ -1,15 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import * as fs from 'fs';
 import fetch from 'node-fetch';
 import {VPMPackage, VPMRepository} from './repo';
-
-interface Package {
-    readonly name: string;
-    readonly version: string;
-    url?: string;
-    repo?: string;
-}
 
 async function getJson(url: string): Promise<unknown> {
     const res = await fetch(url);
@@ -21,6 +13,10 @@ async function getJson(url: string): Promise<unknown> {
     }
 
     return await res.json();
+}
+
+interface HasDigest {
+    digest: string | null;
 }
 
 export async function run(): Promise<void> {
@@ -39,9 +35,6 @@ export async function run(): Promise<void> {
         });
 
         const [owner, repo] = repository.split('/');
-
-        const newPackages: Package[] = [];
-        const prereleasePackages: Package[] = [];
 
         const repo_file_name = new URL(repo_url).pathname
             .split('/')
@@ -91,50 +84,55 @@ export async function run(): Promise<void> {
 
             let zipSHA256: string | undefined = undefined;
 
-            const digest = (package_zip as any).digest;
+            const digest = (package_zip as unknown as HasDigest).digest;
             if (digest !== null) {
                 if (digest.startsWith('sha256:')) {
                     zipSHA256 = digest.slice(7);
                 }
             }
 
-            const get_package_info = async function () {
-                console.log(`[INFO] Fetching package info for ${release.name}`);
-                const packageInfo_ = await getJson(
-                    meta_asset!.browser_download_url
-                );
-                if (typeof packageInfo_ !== 'object') {
-                    console.error(
-                        `[ERROR] Failed to parse package.json for release ${release.name}`
-                    );
-                    console.log(`Got: ${JSON.stringify(packageInfo_)}`);
-                    return null;
-                }
-
-                const packageInfo = packageInfo_ as VPMPackage;
-
-                packageInfo['url'] = `${package_zip!.browser_download_url}?`;
-                packageInfo['repo'] = repo_url;
-                packageInfo['zipSHA256'] = zipSHA256;
-
-                if (doc_url !== '') {
-                    packageInfo['documentationUrl'] = doc_url;
-                }
-                // Temporary until we get the HTML changelog generation and anchors sorted out
-                packageInfo['changelogUrl'] = release.html_url;
-
-                console.log(
-                    `[INFO] Package info for ${release.name}: ${JSON.stringify(packageInfo)}`
-                );
-
-                return packageInfo;
-            };
-
             await vpm_repo.addPackage({
                 name: package_name,
                 version: release.tag_name,
                 url: package_zip.browser_download_url,
-                package_info: get_package_info
+                package_info: async () => {
+                    console.log(
+                        `[INFO] Fetching package info for ${release.name}`
+                    );
+
+                    if (meta_asset === null || package_zip === null) {
+                        return null; // unreachable
+                    }
+
+                    const packageInfo_ = await getJson(
+                        meta_asset.browser_download_url
+                    );
+                    if (typeof packageInfo_ !== 'object') {
+                        console.error(
+                            `[ERROR] Failed to parse package.json for release ${release.name}`
+                        );
+                        console.log(`Got: ${JSON.stringify(packageInfo_)}`);
+                        return null;
+                    }
+
+                    const packageInfo = packageInfo_ as VPMPackage;
+
+                    packageInfo['url'] = `${package_zip.browser_download_url}?`;
+                    packageInfo['repo'] = repo_url;
+                    packageInfo['zipSHA256'] = zipSHA256;
+
+                    if (doc_url !== '') {
+                        packageInfo['documentationUrl'] = doc_url;
+                    }
+                    // Temporary until we get the HTML changelog generation and anchors sorted out
+                    packageInfo['changelogUrl'] = release.html_url;
+
+                    console.log(
+                        `[INFO] Package info for ${release.name}: ${JSON.stringify(packageInfo)}`
+                    );
+
+                    return packageInfo;
+                }
             });
         }
 
