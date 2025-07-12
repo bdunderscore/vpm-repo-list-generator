@@ -34,6 +34,10 @@ export async function run(): Promise<void> {
         const repo_name: string = core.getInput('repo_name');
         const repo_id: string = core.getInput('repo_id');
 
+        const doc_url: string = core.getInput('doc_url', {
+            required: false
+        });
+
         const [owner, repo] = repository.split('/');
 
         const newPackages: Package[] = [];
@@ -108,6 +112,12 @@ export async function run(): Promise<void> {
                 packageInfo['url'] = `${package_zip!.browser_download_url}?`;
                 packageInfo['repo'] = repo_url;
                 packageInfo['zipSHA256'] = zipSHA256;
+
+                if (doc_url !== "") {
+                    packageInfo["documentationUrl"] = doc_url;
+                }
+                // Temporary until we get the HTML changelog generation and anchors sorted out
+                packageInfo['changelogUrl'] = release.html_url;
 
                 console.log(`[INFO] Package info for ${release.name}: ${JSON.stringify(packageInfo)}`);
 
